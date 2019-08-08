@@ -1,0 +1,100 @@
+groups:
+- name: targets
+  rules:
+  - alert: monitor_service_down
+    expr: up == 0
+    for: 30s
+    labels:
+      severity: critical
+      slack_channel: "#prometheus"
+    annotations:
+      summary: "Monitor service non-operational"
+      description: "Service {{ $labels.instance }} is down."
+
+  - alert: hostMemUsageAlert
+    expr: (node_memory_total_bytes - node_memory_free_bytes)/node_memory_total_bytes > 0.5
+    for: 5s
+    labels:
+      severity: page
+      slack_channel: "#prometheus"
+    annotations:
+      summary: "Instance {{ $labels.instance }}:{{ $labels.job }} MEM usgae high"
+      description: "{{ $labels.job }} MEM usage above 85% (current value: {{ $value }})"
+
+- name: targets_node_exporter
+  rules:
+  - alert: server_down
+    expr: up{job="node_exporter_server"} == 0
+    for: 30s
+    labels:
+      severity: critical
+      slack_channel: "#node_exporter_server_monitor"
+    annotations:
+      summary: "Monitor service non-operational"
+      description: "Service {{ $labels.instance }} is down."
+
+  - alert: hostMemUsageAlert
+    expr: (node_memory_MemTotal_bytes{job="node_exporter_server"} - node_memory_MemFree_bytes{job="node_exporter_server"})/node_memory_MemTotal_bytes{job="node_exporter_server"} > 0.85
+    for: 5s
+    labels:
+      severity: page
+      slack_channel: "#elk"
+    annotations:
+      summary: "Instance {{ $labels.instance }}:{{ $labels.job }} MEM usgae high"
+      description: "{{ $labels.job }} MEM usage above 85% (current value: {{ $value }})"
+
+- name: container_server
+  rules:
+  - alert: container_down
+    expr: absent(container_memory_usage_bytes{job="container_server"})
+    for: 10s
+    labels:
+      severity: critical
+      slack_channel: "#container_server_monitor"
+    annotations:
+      summary: "{{ $labels.name }} down"
+      description: "{{ $labels.instance }}:{{ $labels.name }} container is down for more than 10 seconds."
+
+  - alert: container_high_memory
+    expr: sum by (name) (container_memory_usage_bytes{job="container_server",image!=""}) > 2000000000 # 2GB
+    for: 30s
+    labels:
+      severity: warning
+      slack_channel: "#container_server_monitor"
+    annotations:
+      summary: "{{ $labels.name }} high memory usage"
+      description: "{{ $labels.instance }}:{{ $labels.name }} memory consumption is at {{$value}}."
+
+
+- name: pm2_server_service
+  rules:
+  - alert: container_down
+    expr: sum(pm2_up{job="pm2_server"}) by (name) == 0
+    for: 10s
+    labels:
+      severity: critical
+      slack_channel: "#pm2_server_monitor"
+    annotations:
+      summary: "{{ $labels.name }} down"
+      description: "{{ $labels.instance }}:{{ $labels.name }} container is down for more than 10 seconds."  
+  
+  - alert: container_high_cpu
+    expr:  sum by (name) (rate(pm2_cpu{job="pm2_server",name=~".+"}[5m])) > 90
+    for: 5m
+    labels:
+      severity: warning
+      slack_channel: "#pm2_server_monitor"
+    annotations:
+      summary: "{{ $labels.name }} high CPU usage"
+      description: "{{ $labels.instance }}:{{ $labels.name }} CPU usage is {{$value}}%."
+
+  - alert: container_high_memory
+    expr: sum by (name) (pm2_memory{job="pm2_server",name!=""}) > 800000000 # 800MB
+    for: 30s
+    labels:
+      severity: warning
+      slack_channel: "#pm2_server_monitor"
+    annotations:
+      summary: "{{ $labels.name }} high memory usage"
+      description: "{{ $labels.instance }}:{{ $labels.name }} memory consumption is at {{$value}}."
+

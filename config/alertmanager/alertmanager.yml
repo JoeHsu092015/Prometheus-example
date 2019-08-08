@@ -1,0 +1,31 @@
+
+global:
+  slack_api_url: "https://hooks.slack.com/services/link"
+  
+route:
+  receiver: "slack-default-receiver"
+  # group_wait: 30s
+  # group_interval: 5m
+  # repeat_interval: 4h
+  group_by: [ alertname, job]
+  routes:
+    - receiver: 'slack-team-receiver'
+      match_re:
+        slack_channel: "^[@#a-z0-9][a-z0-9._-]*$"
+receivers:
+  - name: "slack-default-receiver"
+    slack_configs:
+      - send_resolved: true
+        channel: "#prometheus"
+        title: '{{ template "slack.slack.title" . }}'
+        text: '<!channel> {{ template "slack.slack.text" . }}'
+
+  - name: "slack-team-receiver"
+    slack_configs:
+      - send_resolved: true
+        channel: '{{ index ((index .Alerts 0).Labels) "slack_channel" }}'
+        title: '{{ template "slack.slack.title" . }}'
+        text: '<!channel> {{ template "slack.slack.text" . }}'
+
+templates:
+    - 'slack.tmpl'

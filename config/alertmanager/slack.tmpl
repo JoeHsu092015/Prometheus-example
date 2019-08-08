@@ -1,0 +1,20 @@
+{{ define "slack.slack.title" -}}
+    {{- if .CommonAnnotations.summary -}}
+        {{- .CommonAnnotations.summary -}}
+    {{- else -}}
+        {{- with index .Alerts 0 -}}
+            {{- .Annotations.summary -}}
+        {{- end -}}
+    {{- end -}}
+{{- end }}
+{{ define "slack.slack.text" -}}
+    {{- if .CommonAnnotations.description -}}
+        {{- .CommonAnnotations.description -}}
+    {{- else -}}
+        {{- range $i, $alert := .Alerts }}
+            {{- if lt $i 10 -}}
+                {{- "\n" -}} {{- index $alert.Annotations "description" -}}
+            {{- end -}}
+        {{- end -}}
+    {{- end -}}
+{{- end }}
